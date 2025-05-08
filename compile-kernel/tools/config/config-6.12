@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 6.12.26 Kernel Configuration
+# Linux/arm64 6.12.27 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="aarch64-none-linux-gnu-gcc (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119"
 CONFIG_CC_IS_GCC=y
@@ -310,7 +310,7 @@ CONFIG_BUILTIN_RETURN_ADDRESS_STRIPS_PAC=y
 #
 # CONFIG_ARCH_ACTIONS is not set
 # CONFIG_ARCH_AIROHA is not set
-# CONFIG_ARCH_SUNXI is not set
+CONFIG_ARCH_SUNXI=y
 # CONFIG_ARCH_ALPINE is not set
 # CONFIG_ARCH_APPLE is not set
 # CONFIG_ARCH_BCM is not set
@@ -332,7 +332,7 @@ CONFIG_ARCH_MESON=y
 # CONFIG_ARCH_QCOM is not set
 # CONFIG_ARCH_REALTEK is not set
 # CONFIG_ARCH_RENESAS is not set
-# CONFIG_ARCH_ROCKCHIP is not set
+CONFIG_ARCH_ROCKCHIP=y
 # CONFIG_ARCH_SEATTLE is not set
 # CONFIG_ARCH_INTEL_SOCFPGA is not set
 # CONFIG_ARCH_STM32 is not set
