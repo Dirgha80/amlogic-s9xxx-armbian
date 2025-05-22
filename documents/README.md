@@ -30,7 +30,7 @@ GitHub Actions is a service launched by Microsoft that provides a virtual server
       - [8.2.3 Installation method for FastRhino R68S](#823-installation-method-for-fastrhino-r68s)
       - [8.2.4 Installation method for Beikeyun](#824-installation-method-for-beikeyun)
       - [8.2.5 Installation method for Chainedbox-L1-Pro](#825-installation-method-for-chainedbox-l1-pro)
-      - [8.2.6 Installation method for lckfb-tspi](#826-Installation-method-for-lckfb-tspi)
+      - [8.2.6 Installation method for lckfb-tspi](#826-installation-method-for-lckfb-tspi)
     - [8.3 Allwinner Series Installation Method](#83-allwinner-series-installation-method)
   - [9. Compiling Armbian Kernel](#9-compiling-armbian-kernel)
     - [9.1 How to Add Custom Kernel Patches](#91-how-to-add-custom-kernel-patches)
@@ -114,7 +114,7 @@ Now you can Fork the repository. Open the repository https://github.com/ophub/am
 
 ## 4. Customization instructions for personalized Armbian system files
 
-The system compilation process is controlled in the [.github/workflows/build-armbian.yml](../../.github/workflows/build-armbian.yml) file. There are other .yml files in the workflows directory that implement different functions. The system is compiled in real time using Armbian's current official code, and related parameters can be referred to the official documentation.
+The system compilation process is controlled in the [.github/workflows/build-armbian.yml](../.github/workflows/build-armbian.yml) file. There are other .yml files in the workflows directory that implement different functions. The system is compiled in real time using Armbian's current official code, and related parameters can be referred to the official documentation.
 
 ```yaml
 - name: Compile Armbian [ ${{ inputs.set_release }} ]
@@ -437,7 +437,7 @@ cd rtl8189ES_linux
 gun_file="arm-gnu-toolchain-13.3.rel1-aarch64-aarch64-none-elf.tar.xz"
 toolchain_path="/usr/local/toolchain"
 toolchain_name="gcc"
-export CROSS_COMPILE="${toolchain_path}/${gun_file//.tar.xz/}/bin/aarch64-none-elf-"
+export CROSS_COMPILE="${toolchain_path}/${gun_file//.tar.xz/}/bin/aarch64-none-linux-gnu-"
 export CC="${CROSS_COMPILE}gcc"
 export LD="${CROSS_COMPILE}ld.bfd"
 export ARCH="arm64"
