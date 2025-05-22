@@ -33,6 +33,7 @@ on:
           - alark35-3500
           - beikeyun
           - chainedbox
+          - s905x4-advan
           - crrc
           - dg3399
           - dg-tn3568
@@ -205,6 +206,7 @@ on:
         type: choice
         options:
           - ophub/kernel
+          - Houjie80/kernel2
       kernel_usage:
         description: "Set the tags of the stable kernel."
         required: false
@@ -215,6 +217,7 @@ on:
           - flippy
           - dev
           - beta
+          - s905x4
       armbian_fstype:
         description: "Select armbian rootfs type."
         required: false
