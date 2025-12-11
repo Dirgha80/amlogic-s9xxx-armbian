@@ -71,6 +71,8 @@ host_release="$(cat /etc/os-release | grep '^VERSION_CODENAME=.*' | cut -d'=' -f
 os_release_file="etc/os-release"
 # Set banner's ${BOARD_NAME}: such as [ s905x3 ]
 armbian_release_file="etc/armbian-release"
+# Add personalized settings for special devices, such as [ s922x-oes-plus ]
+board_release_file="etc/armbian-board-release.conf"
 # Add custom armbian information
 ophub_release_file="etc/ophub-release"
 
@@ -85,15 +87,14 @@ kernel_repo="https://github.com/ophub/kernel"
 default_tags="stable"
 kernel_usage=""
 # Set the list of kernels used by default(Selectable version)
-stable_kernel=("5.15.y" "6.1.y")
+stable_kernel=("6.1.y" "6.12.y")
 flippy_kernel=(${stable_kernel[@]})
-dev_kernel=(${stable_kernel[@]})
 beta_kernel=(${stable_kernel[@]})
-rk3588_kernel=("5.10.y")
-rk35xx_kernel=("5.10.y")
+rk3588_kernel=("6.1.y")
+rk35xx_kernel=("6.1.y")
 h6_kernel=("6.6.y")
 specific_6xy=("6.1.y" "6.6.y" "6.12.y")
-specific_5xy=("5.4.y" "5.10.y" "5.15.y")
+specific_5xy=("5.10.y" "5.15.y")
 # Set to automatically use the latest kernel
 auto_kernel="true"
 # Initialize the kernel array
@@ -101,7 +102,6 @@ declare -A tags_list
 
 # Initialize the build device
 build_board="all"
-
 # Set Armbian size (Unit: MiB, boot_mb >= 256, root_mb >= 2048)
 boot_mb="512"
 root_mb="3000"
@@ -156,7 +156,7 @@ mount_try() {
         else
             sync && sleep 3
             umount -f ${m_target} 2>/dev/null
-            t="$((t + 1))"
+            ((t++))
         fi
     done
     [[ "${t}" -gt "${max_try}" ]] && error_msg "[ ${t} ] attempts to mount failed."
@@ -208,9 +208,8 @@ init_var() {
             if [[ -n "${2}" ]]; then
                 oldIFS="${IFS}"
                 IFS="_"
-                flippy_kernel=(${2})
                 stable_kernel=(${2})
-                dev_kernel=(${2})
+                flippy_kernel=(${2})
                 beta_kernel=(${2})
                 specific_kernel=(${2})
                 IFS="${oldIFS}"
@@ -280,7 +279,7 @@ check_data() {
     [[ -f "${model_conf}" ]] || error_msg "Missing model config file: [ ${model_conf} ]"
 
     # Get a list of build devices
-    if [[ "${build_board}" =~ ^(all|top50|rest50)$ ]]; then
+    if [[ "${build_board}" =~ ^(all|top55|after55)$ ]]; then
         board_list=":(yes)"
         build_armbian=($(
             cat ${model_conf} |
@@ -294,14 +293,14 @@ check_data() {
     fi
     [[ "${#build_armbian[@]}" -eq 0 ]] && error_msg "The [ BOARD ] is missing, stop building."
 
-    # Get the list of the first 50 boards
-    [[ "${build_board}" == "top50" ]] && {
-        build_armbian=("${build_armbian[@]:0:50}")
+    # Get the list of boards before the first 55
+    [[ "${build_board}" == "top55" ]] && {
+        build_armbian=("${build_armbian[@]:0:55}")
         board_list=":($(echo ${build_armbian[@]} | sed -e 's/ /\|/g')):(yes|no)"
     }
-    # Get the list of boards after the first 50
-    [[ "${build_board}" == "rest50" ]] && {
-        build_armbian=("${build_armbian[@]:50}")
+    # Get the list of boards after the first 55
+    [[ "${build_board}" == "after55" ]] && {
+        build_armbian=("${build_armbian[@]:55}")
         board_list=":($(echo ${build_armbian[@]} | sed -e 's/ /\|/g')):(yes|no)"
     }
 
@@ -343,7 +342,7 @@ check_data() {
         fi
 
         # If auto_kernel is false, use the value from -k parameter
-        if [[ "${auto_kernel}" != "true" ]]; then
+        if [[ ! "${auto_kernel}" =~ ^(true|yes)$ ]]; then
             if [[ "${#specific_kernel[@]}" -eq 0 ]]; then
                 error_msg "Plase use the -k parameter to specify the kernel version."
             else
@@ -468,13 +467,13 @@ query_kernel() {
 
                 echo -e "${INFO} (${x}.${i}) [ ${key} - ${tmp_arr_kernels[$i]} ] is latest kernel. \n"
 
-                let i++
+                ((i++))
             done
 
             # Assign the latest kernel version to the array
             tags_list[${key}]="${tmp_arr_kernels[@]}"
 
-            let x++
+            ((x++))
         }
     done
 }
@@ -528,14 +527,14 @@ download_kernel() {
                 # If the kernel contains the sha256sums file, check the files integrity
                 [[ -f "${kernel_path}/${key}/${kernel_var}/sha256sums" ]] && check_kernel "${kernel_path}/${key}/${kernel_var}"
 
-                let i++
+                ((i++))
             done
 
             # Delete downloaded kernel temporary files
             rm -f ${kernel_path}/${key}/*.tar.gz
             sync
 
-            let x++
+            ((x++))
         }
     done
 }
@@ -631,7 +630,9 @@ extract_armbian() {
     loop_old="$(losetup -P -f --show "${armbian_image_file}")"
     [[ -n "${loop_old}" ]] || error_msg "losetup ${armbian_image_file} failed."
 
-    mount_try ext4 ${loop_old}p1 ${tmp_armbian}
+    # Mount rootfs partition
+    [[ -b "${loop_old}p2" ]] && mount_dev="${loop_old}p2" || mount_dev="${loop_old}p1"
+    mount_try ext4 ${mount_dev} ${tmp_armbian}
 
     cd ${tmp_armbian}
 
@@ -680,7 +681,7 @@ make_image() {
     write_board_file="no"
     adjust_kernel_files="no"
     # Check the personalization settings of this board
-    board_release="${different_files}/${board}/rootfs/etc/armbian-board-release.conf"
+    board_release="${different_files}/${board}/rootfs/${board_release_file}"
     [[ -f "${board_release}" ]] && source ${board_release}
 
     # echo -e "${INFO} The [ ${board} ] Armbian image partition status: [ skip:${skip_mb} / boot:${boot_mb} / rootfs:${root_mb} ] MiB."
@@ -1021,13 +1022,17 @@ refactor_rootfs() {
         # Custom banner name
         sed -i "s|^BOARD=.*|BOARD=\"${board}\"|g" ${armbian_release_file}
         sed -i "s|^BOARD_NAME=.*|BOARD_NAME=\"${board}\"|g" ${armbian_release_file}
+        sed -i "s|^BOARDFAMILY=.*|BOARDFAMILY=\"${FAMILY}\"|g" ${armbian_release_file}
         # Use custom type to remove [ No end-user support ] prompt in [ /etc/update-motd.d/10-armbian-header ]
+        sed -i "s|^BOOT_SOC=.*|BOOT_SOC=\"${SOC}\"|g" ${armbian_release_file}
         sed -i "s|^IMAGE_TYPE=.*|IMAGE_TYPE=rebuild|g" ${armbian_release_file}
         sed -i "s|^BOARD_TYPE=.*|BOARD_TYPE=diy|g" ${armbian_release_file}
         sed -i "s|^VENDOR=.*|VENDOR=\"Armbian OS\"|g" ${armbian_release_file}
         # Disable the update of the boot script
         sed -i "s|^FORCE_BOOTSCRIPT_UPDATE=.*|FORCE_BOOTSCRIPT_UPDATE=\"no\"|g" ${armbian_release_file}
         sed -i "s|^BOOTSCRIPT_FORCE_UPDATE=.*|FORCE_BOOTSCRIPT_UPDATE=\"no\"|g" ${armbian_release_file}
+        # Disable the update of the u-boot
+        sed -i "s|^FORCE_UBOOT_UPDATE=.*|FORCE_UBOOT_UPDATE=\"no\"|g" ${armbian_release_file}
     }
 
     # Add custom startup script
@@ -1054,7 +1059,7 @@ refactor_rootfs() {
     # Disable tips of the day for [ /etc/update-motd.d/35-armbian-tips ]
     motd_tips="etc/default/armbian-motd"
     [[ -f "${motd_tips}" ]] && sed -i 's|^MOTD_DISABLE=.*|MOTD_DISABLE="tips"|g' ${motd_tips}
-    quotes_cron="etc/cron.weekly/armbian-quotes"
+    quotes_cron="etc/cron.daily/armbian-quotes"
     [[ -f "${quotes_cron}" ]] && sed -i "s|^curl |#curl |g" ${quotes_cron}
 
     # Add custom disabled alias extension load modules
@@ -1070,6 +1075,19 @@ refactor_rootfs() {
 
     # Renaming/disabling related files
     mv -f etc/udev/rules.d/hdmi.rules etc/udev/rules.d/hdmi.rules.bak 2>/dev/null
+
+    # Disable motd scripts
+    [[ -d "etc/update-motd.d" ]] && {
+        chmod -x etc/update-motd.d/*
+        chmod +x etc/update-motd.d/{10-*,20-*,30-*}
+    }
+
+    # Disable IP information display
+    ip_info_file="etc/update-motd.d/20-ip-info"
+    [[ -f "${ip_info_file}" ]] && {
+        sed -i '/^get_wan.*_address/s/{.*/{ true; }/' ${ip_info_file}
+        sed -i '/if.*ipv6s.*||.*wan6/,/fi/s/^/#/' ${ip_info_file}
+    }
 
     # Explicitly disable resizing for Amlogic device [ /usr/lib/armbian/armbian-resize-filesystem ], use armbian-tf settings
     echo "yes" >root/.no_rootfs_resize
@@ -1213,11 +1231,11 @@ loop_rebuild() {
                     clean_tmp
 
                     echo -e "(${j}.${i}) Armbian build successfully. \n"
-                    let i++
+                    ((i++))
                 }
             done
 
-            let j++
+            ((j++))
         }
     done
 }
@@ -1236,7 +1254,7 @@ find_armbian
 # Download the dependency files
 download_depends
 # Query the latest kernel version
-[[ "${auto_kernel}" == "true" ]] && query_kernel
+[[ "${auto_kernel}" =~ ^(true|yes)$ ]] && query_kernel
 # Download the kernel files
 download_kernel
 
@@ -1253,5 +1271,3 @@ loop_rebuild
 # Show server end information
 echo -e "${STEPS} Server space usage after compilation: \n$(df -hT ${armbian_outputpath}) \n"
 echo -e "${SUCCESS} All process completed successfully."
-# All process completed
-wait
